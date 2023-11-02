@@ -1,0 +1,41 @@
+name: Deploy to S3 Dev
+on: 
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy Pipeline
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        appname: ['Ardet Frontend']
+        node-version: ['18.15.0']
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run build
+        run: CI=false npm run build
+        env:
+          REACT_APP_API_URL: https://backend-deti.findpurposeatwork.com
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Deploy static site to S3 bucket
+        run: aws s3 sync ./build s3://frontend-ardet
